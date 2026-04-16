@@ -145,8 +145,9 @@ unsigned char *bmp_parse_pixels(FILE *fptr,
                 dst[j*3 + 2] = palette[idx][0]; // B
             }
         }
+        // In bmp_parse_pixels, after reading 24/32-bit rows:
     } else {
-        for (int i = 0; i < height; ++i) {  // Use abs(height), not header->height
+        for (int i = 0; i < height; ++i) {
             if (fread(rowData, paddedRowSize, 1, fptr) != 1) {
                 gj_set_error("Failed to read bmp pixel row data\n");
                 free(pixels);
@@ -156,13 +157,25 @@ unsigned char *bmp_parse_pixels(FILE *fptr,
             int dstRow = (header->height > 0)
                 ? (height - 1 - i)  // bottom-up
                 : i;                // top-down
-            memcpy(
-                pixels + dstRow * actualRowSize,
-                rowData,
-                actualRowSize
-            );
+
+            unsigned char *dst = pixels + dstRow * actualRowSize;
+
+            // Convert BGR(A) to RGB(A)
+            for (int j = 0; j < width; ++j) {
+                if (channels == 3) {
+                    dst[j*3 + 0] = rowData[j*3 + 2]; // R = B
+                    dst[j*3 + 1] = rowData[j*3 + 1]; // G = G
+                    dst[j*3 + 2] = rowData[j*3 + 0]; // B = R
+                } else if (channels == 4) {
+                    dst[j*4 + 0] = rowData[j*4 + 3]; // R = B
+                    dst[j*4 + 1] = rowData[j*4 + 2]; // G = G
+                    dst[j*4 + 2] = rowData[j*4 + 1]; // B = R
+                    dst[j*4 + 3] = rowData[j*4 + 0]; // A = A
+                }
+            }
         }
     }
+
     free(rowData);
     return pixels;
 }
@@ -198,7 +211,7 @@ unsigned char *bmp_open(struct image_file *image_file) {
     }
 
     *image_file->width = bmp_bitmap_info_header.width;
-    *image_file->height = bmp_bitmap_info_header.height;
+    *image_file->height = abs(bmp_bitmap_info_header.height);  // Add abs()
     switch (bmp_bitmap_info_header.bitCount) {
         case 8:
             *image_file->channels = 3;
