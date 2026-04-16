@@ -33,6 +33,8 @@ unsigned char *gj_image_load(const char *filename, int *width, int *height, int 
  */
 void           gj_image_free(unsigned char *data);
 
+const char*    gj_get_last_error(void);
+
 #ifdef __cplusplus
 }
 #endif

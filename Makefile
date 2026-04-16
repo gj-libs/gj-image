@@ -5,7 +5,7 @@ CC = gcc
 NAME = libgj_image.a
 
 # Flags
-CFLAGS = -Wall -Wextra -O2 -Iinclude
+CFLAGS = -Wall -Wextra -O2 -Iinclude -Isrc
 
 # Directories
 SRC_DIR = src
