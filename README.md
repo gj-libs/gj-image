@@ -7,7 +7,7 @@
 
 ## Output format
 - 8-bit per channel
-- RGBA
+- RGB|RGBA
 
 ## Build
 ```bash
@@ -16,16 +16,16 @@ make
 
 ## Example
 ```c
-#include <gj_image.h>
+#include "gj_image/gj_image.h"
 
 int main() {
-    Image* img = img_load("image.png");
+    int width, height, channels;
+    unsigned char *data = gj_image_load("image.bmp", &width, &height,
+                                        &channels);
 
-    if (!img) return 1;
+    if (!data) return 1;
 
-    img_save_png(img, "out.png");
-
-    img_free(img);
+    gj_image_free(data);
 
     return 0;
 }

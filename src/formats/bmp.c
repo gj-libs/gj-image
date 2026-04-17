@@ -145,7 +145,6 @@ unsigned char *bmp_parse_pixels(FILE *fptr,
                 dst[j*3 + 2] = palette[idx][0]; // B
             }
         }
-        // In bmp_parse_pixels, after reading 24/32-bit rows:
     } else {
         for (int i = 0; i < height; ++i) {
             if (fread(rowData, paddedRowSize, 1, fptr) != 1) {

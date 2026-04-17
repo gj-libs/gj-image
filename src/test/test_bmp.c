@@ -4,8 +4,7 @@
 #include "gj_image/gj_image.h"
 #include <stdio.h>
 
-int main() {
-    const char *filename = "assets/cv.bmp";
+int test_bmp(const char *filename) {
     int width, height, channels;
     struct image_file image_file = {
         .filename = filename,
@@ -20,5 +19,11 @@ int main() {
     }
     display_image(data, *image_file.width, *image_file.height, *image_file.channels);
     gj_image_free(data);
+    return 0;
+}
+
+
+int main() {
+    test_bmp("assets/nar.bmp");
     return 0;
 }
