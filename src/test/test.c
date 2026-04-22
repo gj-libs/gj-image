@@ -41,7 +41,7 @@ int test_png(const char *filename) {
 }
 
 int main() {
-    test_bmp("assets/nar.bmp");
-    test_png("assets/anaconda.png");
+    test_bmp("assets/anaconda.bmp");
+    test_png("assets/ntxr001.png");
     return 0;
 }

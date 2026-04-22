@@ -62,7 +62,7 @@ void display_image(unsigned char *pixels, int width, int height, int channels) {
         WhitePixel(dpy, screen)
     );
 
-    XStoreName(dpy, win, "PNG Display");
+    XStoreName(dpy, win, "Image Test Display");
     XSelectInput(dpy, win, ExposureMask | KeyPressMask);
     XMapWindow(dpy, win);
 

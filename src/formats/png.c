@@ -488,7 +488,7 @@ uint8_t *png_processIDAT(void *data, uint32_t length,
                          size_t *out_size) {
     int width  = ihdr->width;
     int height = ihdr->height;
-    int bpp;
+    int channels;
 
     switch (ihdr->colorType) {
         case 2: // RGB
@@ -496,7 +496,7 @@ uint8_t *png_processIDAT(void *data, uint32_t length,
                 gj_set_error("Only 8-bit RGB supported\n");
                 return NULL;
             }
-            bpp = 3;
+            channels = 3;
             break;
 
         case 3: // Indexed
@@ -504,7 +504,15 @@ uint8_t *png_processIDAT(void *data, uint32_t length,
                 gj_set_error("Only 8-bit indexed supported\n");
                 return NULL;
             }
-            bpp = 1;
+            channels = 1;
+            break;
+
+        case 6: // RGBA
+            if (ihdr->bitDepth != 8) {
+                gj_set_error("Only 8-bit RGBA supported\n");
+                return NULL;
+            }
+            channels = 4;
             break;
 
         default:
@@ -522,7 +530,7 @@ uint8_t *png_processIDAT(void *data, uint32_t length,
     struct bitStream ds;
     bitstream_init(&ds, idat.data, idat.data_length);
 
-    size_t expected = height * (width * bpp + 1);
+    size_t expected = height * (width * channels + 1);
     uint8_t *output = malloc(expected);
     if (!output) {
         gj_set_error("Failed to allocate output buffer\n");
@@ -568,8 +576,8 @@ uint8_t *png_processIDAT(void *data, uint32_t length,
     }
 
     /* ---- PNG FILTERING ---- */
-    int row_bytes = width * bpp + 1;
-    uint8_t *final_output = malloc(width * height * bpp);
+    int row_bytes = width * channels + 1;
+    uint8_t *final_output = malloc(width * height * channels);
     if (!final_output) {
         free(output);
         return NULL;
@@ -581,14 +589,14 @@ uint8_t *png_processIDAT(void *data, uint32_t length,
         int row_start = row * row_bytes;
         uint8_t filter = output[row_start];
 
-        for (int i = 0; i < width * bpp; i++) {
+        for (int i = 0; i < width * channels; i++) {
             uint8_t raw = output[row_start + 1 + i];
             uint8_t recon;
 
-            uint8_t left = (i >= bpp) ? final_output[idx - bpp] : 0;
-            uint8_t up   = (row > 0)  ? final_output[idx - width * bpp] : 0;
+            uint8_t left = (i >= channels) ? final_output[idx - channels] : 0;
+            uint8_t up   = (row > 0)  ? final_output[idx - width * channels] : 0;
             uint8_t up_left =
-                (row > 0 && i >= bpp) ? final_output[idx - width * bpp - bpp] : 0;
+                (row > 0 && i >= channels) ? final_output[idx - width * channels - channels] : 0;
 
             switch (filter) {
                 case 0: recon = raw; break;
@@ -609,7 +617,7 @@ uint8_t *png_processIDAT(void *data, uint32_t length,
 
     free(output);
 
-    *out_size = width * height * bpp;
+    *out_size = width * height * channels;
     return final_output;
 }
 
@@ -770,7 +778,7 @@ unsigned char *png_finalImageConstruction(struct png_image *image, struct image_
     *image_file->width  = image->ihdr.width;
     *image_file->height = image->ihdr.height;
 
-    int has_alpha = (image->trns.length > 0);
+    int has_alpha = (image->trns.length > 0) || image->ihdr.colorType == 6;
     *image_file->channels = has_alpha ? 4 : 3;
 
     size_t pixel_count = *image_file->width * *image_file->height;
@@ -797,7 +805,6 @@ unsigned char *png_finalImageConstruction(struct png_image *image, struct image_
         }
         return pixels;
     }
-
     /* indexed color (PLTE) */
     if (image->ihdr.colorType == 3 && image->plte.length > 0) {
         for (size_t i = 0; i < pixel_count; i++) {
@@ -816,6 +823,22 @@ unsigned char *png_finalImageConstruction(struct png_image *image, struct image_
                     pixels[i * *image_file->channels + 3] = 255;
                 }
             }
+        }
+        return pixels;
+    }
+
+    /* truecolor (RGBA) */
+    if (image->ihdr.colorType == 6) {
+        for (size_t i = 0; i < pixel_count; i++) {
+            uint8_t r = image->pixels[i * 4 + 0];
+            uint8_t g = image->pixels[i * 4 + 1];
+            uint8_t b = image->pixels[i * 4 + 2];
+            uint8_t a = image->pixels[i * 4 + 3];
+
+            pixels[i * *image_file->channels + 0] = r;
+            pixels[i * *image_file->channels + 1] = g;
+            pixels[i * *image_file->channels + 2] = b;
+            pixels[i * *image_file->channels + 3] = a;
         }
         return pixels;
     }
