@@ -15,6 +15,9 @@ struct bitStream {
     uint8_t *data;    // pointer to the byte buffer
     size_t bytepos;   // byte position in the stream
     size_t length;    // total length of data in bytes
+
+    uint32_t bit_buffer;
+    uint8_t buffer_left;
 };
 
 void bitstream_init(struct bitStream *bs, uint8_t *data, size_t length);

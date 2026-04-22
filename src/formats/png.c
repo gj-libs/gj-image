@@ -74,7 +74,7 @@ struct png_image {
 };
 
 int png_readIDAT(void *data, uint32_t length, struct png_IDAT *idat) {
-    struct bitStream bs;
+    struct bitStream bs = {0};
     bitstream_init(&bs, (uint8_t *)data, length);
 
     uint8_t cmf = ((uint8_t *)data)[0];
@@ -247,7 +247,9 @@ uint32_t png_decodeLlSymbol(struct bitStream *ds, int is_dynamic,
         return png_decodeSymbol(ds, ll_codes, ll_lengths, hlit, 15);
     } else {
         uint32_t symbol;
-        png_decodeFixedHuffmanSymbol(ds, &symbol);
+        if (png_decodeFixedHuffmanSymbol(ds, &symbol) != 0) {
+            return 0xFFFFFFFF;
+        }
         return symbol;
     }
 }
@@ -302,6 +304,10 @@ int png_huffmanDecode(struct bitStream *ds,
                 return -1;
             }
             for (int i = 0; i < length; i++) {
+                if (distance <= 0 || distance > *output_pos) {
+                    gj_set_error("Invalid distance\n");
+                    return -1;
+                }
                 output[*output_pos] = output[*output_pos - distance];
                 (*output_pos)++;
             }
@@ -330,7 +336,7 @@ void png_buildCanonicalHuffman(uint8_t *lengths, uint32_t num_symbols,
     // Find first code for each length
     uint32_t next_code[16] = {0};
     uint32_t code = 0;
-    for (uint32_t bits = 1; bits < max_bits; bits++) {
+    for (uint32_t bits = 1; bits <= max_bits; bits++) {
         code = (code + bl_count[bits - 1]) << 1;
         next_code[bits] = code;
     }
@@ -385,6 +391,10 @@ int png_dynamicHuffmanDecode(struct bitStream *ds, uint8_t *output,
 
     while (decoded < total_codes) {
         uint32_t symbol = png_decodeSymbol(ds, codes, cl_lengths, 19, 7);
+        if (symbol == 0xFFFFFFFF) {
+            gj_set_error("Invalid Huffman symbol\n");
+            return -1;
+        }
 
         if (symbol < 16) {
             uint8_t *target = (decoded < hlit) ? &ll_lengths[decoded] : &dist_lengths[decoded - hlit];
@@ -527,7 +537,7 @@ uint8_t *png_processIDAT(void *data, uint32_t length,
 
     // png_printIDAT(&idat);
 
-    struct bitStream ds;
+    struct bitStream ds = {0};
     bitstream_init(&ds, idat.data, idat.data_length);
 
     size_t expected = height * (width * channels + 1);
@@ -563,12 +573,18 @@ uint8_t *png_processIDAT(void *data, uint32_t length,
         }
 
         if (res != 0) {
-            gj_set_error("DEFLATE block decode failed\n");
+            // gj_set_error("DEFLATE block decode failed\n");
             free(output);
             return NULL;
         }
 
         if (bfinal) break;
+    }
+
+    if (output_pos != expected) {
+        gj_set_error("Size mismatch\n");
+        free(output);
+        return NULL;
     }
 
     if (png_compareAdler32(&idat, output, output_pos) != 1) {
@@ -775,6 +791,10 @@ int png_readChunks(FILE *fptr, struct png_chunk **chunks, struct png_image *imag
 }
 
 unsigned char *png_finalImageConstruction(struct png_image *image, struct image_file *image_file) {
+    if (!image->pixels) {
+        gj_set_error("No pixel data\n");
+        return NULL;
+    }
     *image_file->width  = image->ihdr.width;
     *image_file->height = image->ihdr.height;
 
@@ -809,6 +829,10 @@ unsigned char *png_finalImageConstruction(struct png_image *image, struct image_
     if (image->ihdr.colorType == 3 && image->plte.length > 0) {
         for (size_t i = 0; i < pixel_count; i++) {
             uint8_t idx = image->pixels[i];
+            if (!image->plte.data) {
+                gj_set_error("Missing PLTE for indexed image\n");
+                return NULL;
+            }
             uint8_t *pal = &image->plte.data[idx * 3];
 
             pixels[i * *image_file->channels + 0] = pal[0];
@@ -882,6 +906,17 @@ unsigned char *png_open(struct image_file *image_file) {
             &image.ihdr,
             &image.totalPixelSize
         );
+
+        if (!image.pixels) {
+            // gj_set_error("IDAT processing failed\n");
+            free(image.idatStream.data);
+
+            for (int i = 0; i < chunkCount; ++i) {
+                free(chunks[i].chunkData);
+            }
+            free(chunks);
+            return NULL;
+        }
     }
 
     unsigned char *data = png_finalImageConstruction(&image, image_file);

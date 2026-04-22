@@ -15,6 +15,6 @@ int test_image(const char *filename) {
 
 int main() {
     test_image("assets/anaconda.bmp");
-    test_image("assets/ntxr001.png");
+    test_image("assets/anaconda.png");
     return 0;
 }
