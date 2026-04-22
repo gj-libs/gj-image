@@ -12,8 +12,8 @@ LDFLAGS = -lX11
 SRC_DIR = src
 BUILD_DIR = build
 TEST_DIR = src/test
-TEST_SRC = $(TEST_DIR)/test_bmp.c
-TEST_BIN = test_bmp
+TEST_SRC = $(TEST_DIR)/test.c
+TEST_BIN = test
 
 # Find all source files (internal only)
 SRCS = $(shell find $(SRC_DIR) -name "*.c")

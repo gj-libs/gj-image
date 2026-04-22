@@ -204,7 +204,6 @@ unsigned char *bmp_open(struct image_file *image_file) {
     fseek(fptr, bmp_file_header.offset, SEEK_SET);
     unsigned char *pixels = bmp_parse_pixels(fptr, &bmp_file_header, &bmp_bitmap_info_header);
     if (!pixels) {
-        gj_set_error("failed to parse bmp pixels\n");
         fclose(fptr);
         return NULL;
     }

@@ -4,6 +4,7 @@
 #include "error/error.h"
 #include "common/common.h"
 #include "formats/bmp.h"
+#include "formats/png.h"
 
 unsigned char *gj_image_load(const char *filename, int *width, int *height, int *channels) {
     char *ext = strrchr(filename, '.');
@@ -22,8 +23,7 @@ unsigned char *gj_image_load(const char *filename, int *width, int *height, int 
     if (strcasecmp(ext, ".bmp") == 0) {
         return bmp_open(&image_file);
     } else if (strcasecmp(ext, ".png") == 0) {
-        gj_set_error("Unsupported file format \"%s\"\n", ext);
-        return NULL;
+        return png_open(&image_file);
     } else {
         gj_set_error("Unsupported file format \"%s\"\n", ext);
         return NULL;
