@@ -885,6 +885,8 @@ unsigned char *png_open(struct image_file *image_file) {
     }
 
     unsigned char *data = png_finalImageConstruction(&image, image_file);
+    free(image.pixels);
+    free(image.idatStream.data);
 
     for (int i = 0; i < chunkCount; ++i) {
         free(chunks[i].chunkData);
