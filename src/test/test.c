@@ -8,13 +8,13 @@ int test_image(const char *filename) {
     if (!data) {
         printf("Err: %s", gj_get_last_error());
         return -1; }
-    display_image(data, width, height, channels);
+    // display_image(data, width, height, channels);
     gj_image_free(data);
     return 0;
 }
 
 int main() {
-    test_image("assets/anaconda.bmp");
-    test_image("assets/anaconda.png");
+    test_image("assets/cv.bmp");
+    // test_image("assets/anaconda.png");
     return 0;
 }

@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdio.h>
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -129,20 +130,23 @@ unsigned char *bmp_parse_pixels(FILE *fptr,
             }
 
             // int dstRow = header->height - 1 - i;
+            unsigned char *src = rowData;
             unsigned char *dst = pixels + dstRow * actualRowSize;
 
             for (int j = 0; j < header->width; ++j) {
-                unsigned char idx = rowData[j];
+                unsigned char idx = *src++;
+                /* REMOVED for performance
                 if (idx >= paletteSize) {
                     gj_set_error("Palette index out of range\n");
                     free(pixels);
                     free(rowData);
                     return NULL;
                 }
-
-                dst[j*3 + 0] = palette[idx][2]; // R
-                dst[j*3 + 1] = palette[idx][1]; // G
-                dst[j*3 + 2] = palette[idx][0]; // B
+                */
+                
+                *dst++ = palette[idx][2]; // R
+                *dst++ = palette[idx][1]; // G
+                *dst++ = palette[idx][0]; // B
             }
         }
     } else {
@@ -159,17 +163,30 @@ unsigned char *bmp_parse_pixels(FILE *fptr,
 
             unsigned char *dst = pixels + dstRow * actualRowSize;
 
+            // 2 branches + 2 for loops
+            // instead of 1 for loop + 2 branched
+            // for performance
+
             // Convert BGR(A) to RGB(A)
-            for (int j = 0; j < width; ++j) {
-                if (channels == 3) {
-                    dst[j*3 + 0] = rowData[j*3 + 2]; // R = B
-                    dst[j*3 + 1] = rowData[j*3 + 1]; // G = G
-                    dst[j*3 + 2] = rowData[j*3 + 0]; // B = R
-                } else if (channels == 4) {
-                    dst[j*4 + 0] = rowData[j*4 + 3]; // R = B
-                    dst[j*4 + 1] = rowData[j*4 + 2]; // G = G
-                    dst[j*4 + 2] = rowData[j*4 + 1]; // B = R
-                    dst[j*4 + 3] = rowData[j*4 + 0]; // A = A
+            if (channels == 3) {
+                unsigned char *src = rowData;
+                for (int j = 0; j < width; ++j) {
+                    *dst++ = src[2];
+                    *dst++ = src[1];
+                    *dst++ = src[0];
+
+                    src += 3;
+                }
+            }
+            else if (channels == 4) {
+                unsigned char *src = rowData;
+                for (int j = 0; j < width; ++j) {
+                    *dst++ = src[2];
+                    *dst++ = src[1];
+                    *dst++ = src[0];
+                    *dst++ = src[3];
+
+                    src += 4;
                 }
             }
         }
